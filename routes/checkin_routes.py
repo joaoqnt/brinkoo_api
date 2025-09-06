@@ -62,20 +62,25 @@ def build_checkin_query(filtros: dict = None, limit: int = None, offset: int = N
 
     if filtros:
         for campo, valor in filtros.items():
-            if valor is None:
+            # Trata valores que significam "nulo"
+            if valor in [None, "", "null", "NULL"]:
                 where_clauses.append(f"{campo} IS NULL")
+
             elif isinstance(valor, (list, tuple)) and len(valor) == 2:
                 where_clauses.append(f"{campo} BETWEEN %s AND %s")
                 params.extend(valor)
+
             elif isinstance(valor, str):
                 # Se não tiver '%' no valor, aplica busca parcial automática
                 if "%" not in valor:
                     valor = f"%{valor}%"
                 where_clauses.append(f"{campo} ILIKE %s")
                 params.append(valor)
+
             else:
                 where_clauses.append(f"{campo} = %s")
                 params.append(valor)
+
 
     if where_clauses:
         base_query += " WHERE " + " AND ".join(where_clauses)
@@ -89,7 +94,7 @@ def build_checkin_query(filtros: dict = None, limit: int = None, offset: int = N
     if offset is not None:
         base_query += " OFFSET %s"
         params.append(offset)
-
+    print(base_query,params)
     return base_query, params
 
 
@@ -103,7 +108,9 @@ def listar_e_buscar_checkins():
 
         # Converte tipos numéricos e booleanos conforme necessário
         for k, v in list(filtros.items()):
-            if v and v.isdigit():
+            if v is None or v.lower() in ["null", "none", ""]:
+                filtros[k] = None
+            elif v and v.isdigit():
                 filtros[k] = int(v)
             elif v in ["true", "false"]:
                 filtros[k] = v == "true"
