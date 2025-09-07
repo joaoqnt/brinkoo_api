@@ -3,33 +3,49 @@ from utils.db_helpers import select_dict, generate_insert_sql, generate_update_s
 
 usuario_bp = Blueprint("usuario_routes", __name__)
 
-def build_usuario_query(filtros: dict = None, limit: int = None, offset: int = None):
+def build_usuario_query(filtros: dict = None, limit: int = None, offset: int = None, modo_login: bool = False):
     base_query = """
-        SELECT * FROM usuario
+        SELECT 
+            u.*,
+            row_to_json(e) empresa 
+        FROM usuario u
+        LEFT JOIN empresa e ON e.id = u.empresa
     """
     where_clauses = []
     params = []
 
     if filtros:
         if filtros.get('id'):
-            where_clauses.append("id = %s")
+            where_clauses.append("u.id = %s")
             params.append(filtros['id'])
 
         if filtros.get('login'):
-            search_term = filtros['login'].lower().strip()
-            where_clauses.append("unaccent(lower(login)) LIKE unaccent(lower(%s))")
-            params.append(f"%{search_term}%")
+            if modo_login:
+                # login exato
+                where_clauses.append("u.login = %s")
+                params.append(filtros['login'])
+            else:
+                # busca com LIKE + similarity
+                search_term = filtros['login'].lower().strip()
+                where_clauses.append("unaccent(lower(u.login)) LIKE unaccent(lower(%s))")
+                params.append(f"%{search_term}%")
+
+        if filtros.get('senha'):
+            where_clauses.append("u.senha = %s")
+            params.append(filtros['senha'])
 
     query = base_query
 
     if where_clauses:
         query += " WHERE " + " AND ".join(where_clauses)
 
-    if filtros and filtros.get('login'):
-        query += " ORDER BY similarity(unaccent(lower(login)), unaccent(lower(%s))) DESC"
-        params.append(filtros['login'].lower())
-    else:
-        query += " ORDER BY id DESC"
+    # ordenação só em busca normal
+    if not modo_login:
+        if filtros and filtros.get('login'):
+            query += " ORDER BY similarity(unaccent(lower(u.login)), unaccent(lower(%s))) DESC"
+            params.append(filtros['login'].lower())
+        else:
+            query += " ORDER BY u.id DESC"
 
     if limit is not None:
         query += " LIMIT %s"
@@ -39,6 +55,7 @@ def build_usuario_query(filtros: dict = None, limit: int = None, offset: int = N
         query += " OFFSET %s"
         params.append(offset)
 
+    print(query, params)  # debug
     return query, params
 
 @usuario_bp.route("/usuarios", methods=["GET"])
@@ -62,6 +79,32 @@ def listar_usuarios():
         return jsonify(usuarios)
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
+    
+@usuario_bp.route("/login", methods=["POST"])
+def login():
+    try:
+        data = request.get_json()
+        if not data or "login" not in data or "senha" not in data:
+            return jsonify({"erro": "Login e senha são obrigatórios"}), 400
+
+        filtros = {
+            "login": data["login"],
+            "senha": data["senha"]
+        }
+
+        query, params = build_usuario_query(filtros=filtros, limit=1, modo_login=True)
+
+        cursor = g.conn.cursor()
+        usuarios = select_dict(cursor, query, params)
+        cursor.close()
+
+        if not usuarios:
+            return jsonify({"erro": "Usuário ou senha inválidos"}), 401
+
+        return jsonify(usuarios[0])
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+
 
 @usuario_bp.route("/usuarios", methods=["POST"])
 def criar_usuario():
