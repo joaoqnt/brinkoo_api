@@ -14,8 +14,8 @@ def build_query(filtros: dict = None, limit: int = None, offset: int = None):
                 if isinstance(value, bool):
                     where_clauses.append(f"{key} = %s")
                     params.append(value)
-                elif key == 'descricao':
-                    where_clauses.append("unaccent(lower(descricao)) LIKE unaccent(lower(%s))")
+                elif key == 'nome':
+                    where_clauses.append("unaccent(lower(nome)) LIKE unaccent(lower(%s))")
                     params.append(f"%{value.lower().strip()}%")
                 else:
                     where_clauses.append(f"{key} = %s")
@@ -26,7 +26,7 @@ def build_query(filtros: dict = None, limit: int = None, offset: int = None):
     if where_clauses:
         query += " WHERE " + " AND ".join(where_clauses)
 
-    query += " ORDER BY id DESC"
+    query += " ORDER BY nome asc"
 
     if limit is not None:
         query += " LIMIT %s"
@@ -43,7 +43,7 @@ def listar_parceiros():
     try:
         filtros = {
             "id": request.args.get("id", type=int),
-            "descricao": request.args.get("descricao"),
+            "nome": request.args.get("nome"),
             "pessoa_fisica": request.args.get("pessoa_fisica", type=lambda x: x.lower() == 'true'),
             "cpf_cnpj": request.args.get("cpf_cnpj"),
             "telefone": request.args.get("telefone"),

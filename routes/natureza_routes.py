@@ -29,7 +29,7 @@ def build_query(filtros: dict = None, limit: int = None, offset: int = None):
         query += " ORDER BY similarity(unaccent(lower(descricao)), unaccent(lower(%s))) DESC"
         params.append(filtros['descricao'].lower())
     else:
-        query += " ORDER BY id DESC"
+        query += " ORDER BY descricao ASC"
 
     if limit is not None:
         query += " LIMIT %s"

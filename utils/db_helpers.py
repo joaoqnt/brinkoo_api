@@ -1,13 +1,18 @@
 import json
 from datetime import date, datetime
 
+from datetime import date, datetime
+from decimal import Decimal
+import json
+
 def select_dict(cursor, query: str, params=None):
     """
     Executa SELECT e retorna resultado como lista de dicionários.
     Converte automaticamente:
     - Datas para strings no formato ISO
-    - JSON strings para objetos Python
-    - Outros tipos especiais para formatos serializáveis
+    - JSON strings para objetos Python (se claramente for JSON)
+    - Decimal para float
+    - Mantém tipos originais sempre que possível
     """
     cursor.execute(query, params or ())
     rows = cursor.fetchall()
@@ -18,18 +23,23 @@ def select_dict(cursor, query: str, params=None):
             return None
         elif isinstance(value, (date, datetime)):
             return value.isoformat()
+        elif isinstance(value, Decimal):
+            # Converte para float (ou str se quiser evitar perda de precisão)
+            return float(value)
         elif isinstance(value, (dict, list)):
             return value
         elif isinstance(value, str):
-            try:
-                # Tenta converter strings que podem ser JSON
-                return json.loads(value)
-            except (json.JSONDecodeError, ValueError):
-                return value
+            # Só tenta json.loads se a string parecer JSON
+            if value.strip().startswith(('{', '[', '"')):
+                try:
+                    return json.loads(value)
+                except (json.JSONDecodeError, ValueError):
+                    return value
+            return value
         elif hasattr(value, '__dict__'):
             return vars(value)
         else:
-            return str(value) if not isinstance(value, (int, float, bool)) else value
+            return value  # Mantém o tipo original
     
     result = []
     for row in rows:
@@ -39,7 +49,6 @@ def select_dict(cursor, query: str, params=None):
         result.append(row_dict)
     
     return result
-
 
 def generate_insert_sql(table: str, data: dict, returning: str = None):
     colunas = list(data.keys())

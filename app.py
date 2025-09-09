@@ -14,6 +14,7 @@ from routes.guarda_volume_routes import guarda_volume_bp
 from routes.parceiro_routes import parceiro_bp
 from routes.parametro_routes import parametro_bp
 from routes.usuario_routes import usuario_bp
+from routes.convenio_routes import convenio_bp
 from routes.viacep_routes import viacep_bp
 
 from routes.forma_pagamento_routes import forma_pagamento_bp
@@ -74,6 +75,7 @@ app.register_blueprint(usuario_bp)
 app.register_blueprint(forma_pagamento_bp)
 app.register_blueprint(financeiro_bp)
 app.register_blueprint(viacep_bp)
+app.register_blueprint(convenio_bp)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", debug=False)

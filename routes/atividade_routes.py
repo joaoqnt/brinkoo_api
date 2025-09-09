@@ -7,7 +7,7 @@ atividade_bp = Blueprint("atividade_routes", __name__)
 def listar_atividades():
     try:
         cursor = g.conn.cursor()
-        atividades = select_dict(cursor, "SELECT * FROM atividade ORDER BY id")
+        atividades = select_dict(cursor, "SELECT * FROM atividade ORDER BY descricao")
         cursor.close()
         return jsonify(atividades)
     except Exception as e:

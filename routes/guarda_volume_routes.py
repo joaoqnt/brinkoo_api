@@ -21,6 +21,10 @@ def build_query(filtros: dict = None, limit: int = None, offset: int = None):
         if filtros.get('utilizado') is not None:
             where_clauses.append("utilizado = %s")
             params.append(filtros['utilizado'])
+        
+        if filtros.get('empresa') is not None:
+            where_clauses.append("empresa = %s")
+            params.append(filtros['empresa'])
 
     query = base_query
 
@@ -31,7 +35,7 @@ def build_query(filtros: dict = None, limit: int = None, offset: int = None):
         query += " ORDER BY similarity(unaccent(lower(descricao)), unaccent(lower(%s))) DESC"
         params.append(filtros['descricao'].lower())
     else:
-        query += " ORDER BY id DESC"
+        query += " ORDER BY descricao"
 
     if limit is not None:
         query += " LIMIT %s"
@@ -49,6 +53,7 @@ def listar_guardas_volume():
         filtros = {
             "id": request.args.get("id", type=int),
             "descricao": request.args.get("descricao"),
+            "empresa": request.args.get("empresa"),
             "utilizado": request.args.get("utilizado", type=lambda x: x.lower() == 'true'),
         }
         filtros = {k: v for k, v in filtros.items() if v is not None}

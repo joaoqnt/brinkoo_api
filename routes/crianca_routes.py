@@ -62,7 +62,7 @@ def build_query(filtros: dict = None, limit: int = None, offset: int = None):
         query += " ORDER BY similarity(unaccent(LOWER(c.nome)), unaccent(LOWER(%s))) DESC"
         params.append(filtros['nome_crianca'].lower())
     else:
-        query += " ORDER BY c.id DESC"
+        query += " ORDER BY c.nome asc"
 
     # Paginação
     if limit is not None:
